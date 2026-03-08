@@ -2,6 +2,8 @@ package com.vitacare.api.controller;
 
 import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +22,15 @@ public class UserController {
         this.repo = repo;
     }
 
+    @Operation(summary = "Get all users")
+    @ApiResponse(responseCode = "200", description = "List of users")
     @GetMapping
     public List<User> list() {
         return repo.findAll();
     }
 
+    @Operation(summary = "Create a new user")
+    @ApiResponse(responseCode = "201", description = "User created")
     @PostMapping
     public ResponseEntity<User> create(@Valid @RequestBody CreateUserRequest req) {
         User u = new User();
