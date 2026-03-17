@@ -1,4 +1,4 @@
-package com.vitacare.api.controller;
+  package com.vitacare.api.controller;
 
 import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
@@ -34,16 +34,29 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> create(@Valid @RequestBody CreateUserRequest req) {
         User u = new User();
-        u.setUsername(req.getUsername());
+        u.setEmail(req.getEmail());
+        // minimal defaults to satisfy DB NOT NULL constraints
+        u.setPasswordHash(req.getPassword() != null ? req.getPassword() : "");
+        u.setRole(req.getRole() != null ? req.getRole() : "CLIENT");
         User saved = repo.save(u);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     public static class CreateUserRequest {
         @NotBlank
-        private String username;
+        private String email;
 
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
+        private String password;
+
+        private String role;
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
     }
 }
