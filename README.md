@@ -1,3 +1,4 @@
+
 # VitaCare
 
 VitaCare - pacientes e nutricionistas conectados com acompanhamento nutricional inteligente.
@@ -40,23 +41,8 @@ Ferramentas de **monitoramento, testes, otimização de performance e coleta de 
 
 ## Equipe
 
-| Scrum Master | Líder do projeto e
-planejamento das atividades
-– tirar os impedimentos e
-fazer a comunicação com
-demais stakeholders,
-controlar o quadro Kanban
- | Nathan Tanzi |
-| --- | --- | --- |
-| PO - Product Owner | Dono do Produto:
-responsável por definir o
-backlog do produto e suas
-prioridades junto com o
-cliente. | Marisol Marques |
-| Team | Time de desenvolvimento –
-deve ter: (1) projetista (2)
-analítico (3) implementador
-(4) testador | Amanda Silva              (3, 4) 
-Giulia Albuquerque   (3, 4) 
-Nathan Tanzi                (1, 3)
-Marisol Marques        (2, 3, 4) |
+|Função |Descrição |Responsável|
+|-------|----------|-----------|
+| Scrum Master | Líder do projeto e planejamento das atividades – tirar os impedimentos e fazer a comunicação com demais stakeholders, controlar o quadro Kanban| Nathan Tanzi |
+| PO - Product Owner | Dono do Produto: responsável por definir o backlog do produto e suas prioridades junto com o cliente. | Marisol Marques |
+| Team | Time de desenvolvimento – deve ter: (1) projetista (2) analítico (3) implementador (4) testador | Amanda Silva              (3, 4) Giulia Albuquerque   (3, 4) Nathan Tanzi                (1, 3) Marisol Marques        (2, 3, 4) |
