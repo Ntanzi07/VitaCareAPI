@@ -1,5 +1,7 @@
 package com.vitacare.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.ToString;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -24,9 +26,12 @@ public class User {
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(columnDefinition = "uuid")
     private UUID id;
+    
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
+    @ToString.Exclude
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
