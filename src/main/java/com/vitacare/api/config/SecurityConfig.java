@@ -35,7 +35,7 @@ public class SecurityConfig {
               ).permitAll()
               .requestMatchers("/api/auth/**").permitAll()
               .requestMatchers(HttpMethod.GET, "/api/users/**").hasRole("ADMIN")
-              .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
+              .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
               .anyRequest().authenticated()
           )
           .httpBasic(httpBasic -> httpBasic.disable())
