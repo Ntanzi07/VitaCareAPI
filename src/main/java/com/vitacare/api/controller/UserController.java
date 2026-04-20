@@ -4,16 +4,20 @@ import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import jakarta.validation.constraints.NotBlank;
-import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
+@SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
     private final UserRepository repo;
@@ -25,38 +29,26 @@ public class UserController {
     @Operation(summary = "Get all users")
     @ApiResponse(responseCode = "200", description = "List of users")
     @GetMapping
-    public List<User> list() {
-        return repo.findAll();
+    public Page<UserListResponse> list(Pageable pageable) {
+        return repo.findAll(pageable).map(user -> new UserListResponse(
+            user.getId(),
+            user.getEmail(),
+            user.getRole(),
+            user.getCreatedAt()
+        ));
     }
 
-    @Operation(summary = "Create a new user")
-    @ApiResponse(responseCode = "201", description = "User created")
-    @PostMapping
-    public ResponseEntity<User> create(@Valid @RequestBody CreateUserRequest req) {
-        User u = new User();
-        u.setEmail(req.getEmail());
-        // minimal defaults to satisfy DB NOT NULL constraints
-        u.setPasswordHash(req.getPassword() != null ? req.getPassword() : "");
-        u.setRole(req.getRole() != null ? req.getRole() : "CLIENT");
-        User saved = repo.save(u);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    @Operation(summary = "Delete a user")
+    @ApiResponse(responseCode = "200", description = "User deleted")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<DeleteResponse> delete(@PathVariable UUID id) {
+        User user = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
+        repo.delete(user);
+        return ResponseEntity.ok(new DeleteResponse(true));
     }
 
-    public static class CreateUserRequest {
-        @NotBlank
-        private String email;
+    public record UserListResponse(UUID id, String email, String role, OffsetDateTime createdAt) {}
 
-        private String password;
-
-        private String role;
-
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-
-        public String getRole() { return role; }
-        public void setRole(String role) { this.role = role; }
-    }
+    public record DeleteResponse(boolean deleted) {}
 }
