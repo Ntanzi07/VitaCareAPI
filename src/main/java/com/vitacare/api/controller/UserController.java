@@ -2,6 +2,7 @@
 
 import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
+import com.vitacare.api.security.RoleFlags;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,7 +35,8 @@ public class UserController {
         return repo.findAll(pageable).map(user -> new UserListResponse(
             user.getId(),
             user.getEmail(),
-            user.getRole(),
+            user.getRoleMask(),
+            RoleFlags.toNames(user.getRoleMask()),
             user.getCreatedAt()
         ));
     }
@@ -48,7 +51,7 @@ public class UserController {
         return ResponseEntity.ok(new DeleteResponse(true));
     }
 
-    public record UserListResponse(UUID id, String email, String role, OffsetDateTime createdAt) {}
+    public record UserListResponse(UUID id, String email, Integer roleMask, List<String> roles, OffsetDateTime createdAt) {}
 
     public record DeleteResponse(boolean deleted) {}
 }

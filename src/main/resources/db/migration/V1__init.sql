@@ -6,21 +6,21 @@ CREATE TABLE users (
 
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role VARCHAR(20) NOT NULL, -- 'CLIENT' ou 'NUTRITIONIST'
+    role_mask INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Tabela de clientes, associada a usuários do tipo CLIENT (clients referenced by other tables)
 CREATE TABLE clients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
 
     name VARCHAR(255),
     birth_date DATE,
     height NUMERIC(5,2),
     weight NUMERIC(5,2),
 
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Tabela de nutricionistas, associada a usuários do tipo NUTRITIONIST
@@ -34,7 +34,9 @@ CREATE TABLE nutritionists (
     banner_image TEXT,
     crn VARCHAR(50),
     consultation_price NUMERIC(10,2),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+
 );
 
 CREATE TABLE nutritionist_availability (
@@ -60,7 +62,7 @@ CREATE TABLE plans (
 -- Tabela para armazenar registros de clientes, como notas, planos de dieta, etc.
 CREATE TABLE client_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES clients(user_id) ON DELETE CASCADE,
     nutritionist_id UUID REFERENCES nutritionists(id) ON DELETE CASCADE,
 
     notes TEXT,
@@ -71,7 +73,7 @@ CREATE TABLE client_records (
 -- Tabela de assinaturas, associando clientes a planos de nutricionistas
 CREATE TABLE subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES clients(user_id) ON DELETE CASCADE,
     plan_id UUID REFERENCES plans(id) ON DELETE CASCADE,
 
     start_date DATE,

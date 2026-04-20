@@ -2,6 +2,7 @@ package com.vitacare.api.config;
 
 import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
+import com.vitacare.api.security.RoleFlags;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +20,7 @@ public class DataInitializer {
                 User admin = new User();
                 admin.setEmail("admin@vitacare.com");
                 admin.setPasswordHash(passwordEncoder.encode("admin123"));
-                admin.setRole("ADMIN");
+                admin.setRoleMask(RoleFlags.ADMIN);
                 userRepository.save(admin);
             }
         };
