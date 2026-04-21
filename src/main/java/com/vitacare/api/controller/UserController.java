@@ -1,4 +1,4 @@
-  package com.vitacare.api.controller;
+package com.vitacare.api.controller;
 
 import com.vitacare.api.model.User;
 import com.vitacare.api.repository.UserRepository;
