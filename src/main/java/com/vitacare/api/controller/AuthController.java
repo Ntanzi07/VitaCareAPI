@@ -1,12 +1,16 @@
 package com.vitacare.api.controller;
 
+import com.vitacare.api.model.Client;
 import com.vitacare.api.model.User;
+import com.vitacare.api.repository.ClientRepository;
 import com.vitacare.api.repository.UserRepository;
 import com.vitacare.api.security.AuthTokenService;
 import com.vitacare.api.security.AuthenticatedUser;
+import com.vitacare.api.security.RoleFlags;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,22 +18,29 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final Set<String> ALLOWED_ROLES = Set.of("CLIENT", "NUTRITIONIST", "ADMIN");
-
     private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
     private final AuthTokenService authTokenService;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UserRepository userRepository, AuthTokenService authTokenService, PasswordEncoder passwordEncoder) {
+    public AuthController(
+        UserRepository userRepository,
+        ClientRepository clientRepository,
+        AuthTokenService authTokenService,
+        PasswordEncoder passwordEncoder
+    ) {
         this.userRepository = userRepository;
+        this.clientRepository = clientRepository;
         this.authTokenService = authTokenService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -41,14 +52,36 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
 
+        int roleMask = resolveRoleMaskFromPayload(request);
+        validateProfilePayload(roleMask, request);
+
         User user = new User();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(normalizeRole(request.role(), "CLIENT"));
+        user.setRoleMask(roleMask);
 
         User saved = userRepository.save(user);
+        ProfileResponse clientProfile = null;
+        ProfileResponse nutritionistProfile = null;
+
+        if (RoleFlags.hasRole(roleMask, RoleFlags.CLIENT)) {
+            Client client = new Client();
+            client.setUser(saved);
+            client.setName(request.client().name());
+            client.setBirthDate(request.client().birthDate());
+            client.setHeight(request.client().height());
+            client.setWeight(request.client().weight());
+            Client savedClient = clientRepository.save(client);
+            clientProfile = toProfileResponse(savedClient);
+        }
+
+        if (RoleFlags.hasRole(roleMask, RoleFlags.NUTRITIONIST)) {
+            nutritionistProfile = toProfileResponse(saved.getId(), request.nutritionist());
+        }
+
         String token = authTokenService.issueToken(saved);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new RegisterResponse(token, toAuthUserResponse(saved)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new RegisterResponse(token, "Bearer", toMeResponse(saved, clientProfile, nutritionistProfile)));
     }
 
     @PostMapping("/login")
@@ -61,7 +94,11 @@ public class AuthController {
         }
 
         String token = authTokenService.issueToken(user);
-        return ResponseEntity.ok(new LoginResponse(token, "Bearer", toAuthUserResponse(user)));
+        ProfileResponse clientProfile = clientRepository.findByUser_Id(user.getId())
+            .map(AuthController::toProfileResponse)
+            .orElse(null);
+        ProfileResponse nutritionistProfile = null;
+        return ResponseEntity.ok(new LoginResponse(token, "Bearer", toMeResponse(user, clientProfile, nutritionistProfile)));
     }
 
     @GetMapping("/me")
@@ -74,43 +111,106 @@ public class AuthController {
         User user = userRepository.findById(principal.id())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return new MeResponse(user.getId(), user.getEmail(), user.getRole(), null, null);
+        ProfileResponse clientProfile = clientRepository.findByUser_Id(user.getId())
+            .map(AuthController::toProfileResponse)
+            .orElse(null);
+        ProfileResponse nutritionistProfile = null;
+
+        return toMeResponse(user, clientProfile, nutritionistProfile);
     }
 
     private static String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
-    private static String normalizeRole(String role, String fallback) {
-        String resolved = role == null || role.isBlank() ? fallback : role.trim().toUpperCase(Locale.ROOT);
-        if (!ALLOWED_ROLES.contains(resolved)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+    private static int resolveRoleMaskFromPayload(RegisterRequest request) {
+        int roleMask = 0;
+
+        if (request.client() != null) {
+            roleMask |= RoleFlags.CLIENT;
         }
-        return resolved;
+        if (request.nutritionist() != null) {
+            roleMask |= RoleFlags.NUTRITIONIST;
+        }
+
+        if (roleMask == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one profile (client or nutritionist) must be provided");
+        }
+
+        return roleMask;
     }
 
-    private static AuthUserResponse toAuthUserResponse(User user) {
-        return new AuthUserResponse(user.getId(), user.getEmail(), user.getRole());
+    private static void validateProfilePayload(int roleMask, RegisterRequest request) {
+        boolean hasClientRole = RoleFlags.hasRole(roleMask, RoleFlags.CLIENT);
+        boolean hasNutritionistRole = RoleFlags.hasRole(roleMask, RoleFlags.NUTRITIONIST);
+
+        if (hasClientRole) {
+            if (request.client() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "client payload is required for CLIENT role");
+            }
+        } else if (request.client() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "client payload must be null when CLIENT role is absent");
+        }
+
+        if (hasNutritionistRole) {
+            if (request.nutritionist() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "nutritionist payload is required for NUTRITIONIST role");
+            }
+        } else if (request.nutritionist() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "nutritionist payload must be null when NUTRITIONIST role is absent");
+        }
     }
 
-    public record RegisterRequest(@NotBlank String email, @NotBlank String password, String role) {
+    private static MeResponse toMeResponse(User user, ProfileResponse clientProfile, ProfileResponse nutritionistProfile) {
+        int roleMask = user.getRoleMask() == null ? RoleFlags.CLIENT : user.getRoleMask();
+        return new MeResponse(user.getId(), user.getEmail(), roleMask, clientProfile, nutritionistProfile);
+    }
+
+    private static ProfileResponse toProfileResponse(Client client) {
+        return new ProfileResponse(
+            client.getId(),
+            client.getName(),
+            client.getBirthDate(),
+            client.getHeight(),
+            client.getWeight()
+        );
+    }
+
+    private static ProfileResponse toProfileResponse(UUID userId, NutritionistRegisterPayload nutritionist) {
+        return new ProfileResponse(userId, nutritionist.name(), null, null, null);
+    }
+
+    public record RegisterRequest(
+        @NotBlank String email,
+        @NotBlank String password,
+        @Valid ClientRegisterPayload client,
+        @Valid NutritionistRegisterPayload nutritionist
+    ) {
+    }
+
+    public record ClientRegisterPayload(
+        @NotBlank String name,
+        @NotNull LocalDate birthDate,
+        @NotNull BigDecimal height,
+        @NotNull BigDecimal weight
+    ) {
+    }
+
+    public record NutritionistRegisterPayload(@NotBlank String name, String description) {
     }
 
     public record LoginRequest(@NotBlank String email, @NotBlank String password) {
     }
 
-    public record RegisterResponse(String token, AuthUserResponse user) {
+    public record RegisterResponse(String token, String type, MeResponse user) {
     }
 
-    public record LoginResponse(String token, String type, AuthUserResponse user) {
+    public record LoginResponse(String token, String type, MeResponse user) {
     }
 
-    public record AuthUserResponse(UUID id, String email, String role) {
+    public record MeResponse(UUID id, String email, int roleMask, ProfileResponse client, ProfileResponse nutritionist) {
     }
 
-    public record MeResponse(UUID id, String email, String role, ProfileResponse client, ProfileResponse nutritionist) {
-    }
-
-    public record ProfileResponse(UUID id, String name, String description, String type) {
+    public record ProfileResponse(UUID id, String name, LocalDate birthDate, BigDecimal height, BigDecimal weight) {
     }
 }
