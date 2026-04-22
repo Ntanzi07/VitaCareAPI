@@ -45,7 +45,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/plans/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
-
+                .requestMatchers("/api/subscriptions/**").authenticated()
+                .requestMatchers("/api/clients/**").authenticated()
                 .anyRequest().authenticated()
           )
           .httpBasic(httpBasic -> httpBasic.disable())
