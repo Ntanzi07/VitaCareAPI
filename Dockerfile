@@ -5,7 +5,6 @@ RUN chmod +x ./gradlew && ./gradlew build -x test --no-daemon
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-# Exclude the plain jar, copy only the fat jar
-COPY --from=build /home/gradle/project/build/libs/*[^plain].jar /app.jar
+COPY --from=build /home/gradle/project/build/libs/app.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
