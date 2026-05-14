@@ -14,7 +14,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "plans")
 public class Plan {
 
     @Id
