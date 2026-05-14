@@ -15,7 +15,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "nutritionists")
 public class Nutritionist {
 
     @Id
