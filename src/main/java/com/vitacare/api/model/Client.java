@@ -24,6 +24,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "clients")
 public class Client {
     @Id
     @Column(name = "user_id", columnDefinition = "uuid")
